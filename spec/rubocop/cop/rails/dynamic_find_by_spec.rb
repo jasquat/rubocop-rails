@@ -267,4 +267,27 @@ RSpec.describe RuboCop::Cop::Rails::DynamicFindBy, :config do
       end
     end
   end
+
+  context 'RUBOCOP_RAILS_FIND_BY_RESERVED_METHODS' do
+    it 'respects the RUBOCOP_RAILS_FIND_BY_RESERVED_METHODS env var' do
+      ENV['RUBOCOP_RAILS_FIND_BY_RESERVED_METHODS'] = 'find_by_reserved_method_one,find_by_reserved_method_two!'
+
+      expect_offense(<<~RUBY)
+        User.find_by_not_a_reserved_method(name)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `find_by` instead of dynamic `find_by_not_a_reserved_method`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.find_by(not_a_reserved_method: name)
+      RUBY
+
+      expect_no_offenses(<<~RUBY)
+        User.find_by_reserved_method_one("backend")
+      RUBY
+
+      expect_no_offenses(<<~RUBY)
+        User.find_by_reserved_method_two!("backend")
+      RUBY
+    end
+  end
 end

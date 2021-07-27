@@ -16,7 +16,7 @@ InternalAffairs/NodeDestructuring:
 
 # Offense count: 10
 Metrics/AbcSize:
-  Max: 17
+  Max: 19
 
 # Offense count: 4
 # Configuration parameters: CountComments.

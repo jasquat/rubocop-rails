@@ -225,4 +225,27 @@ RSpec.describe RuboCop::Cop::Rails::DynamicFindAllBy, :config do
       end
     end
   end
+
+  context 'RUBOCOP_RAILS_FIND_BY_RESERVED_METHODS' do
+    it 'respects the RUBOCOP_RAILS_FIND_BY_RESERVED_METHODS env var' do
+      ENV['RUBOCOP_RAILS_FIND_BY_RESERVED_METHODS'] = 'find_all_by_reserved_method_one,find_all_by_reserved_method_two!'
+
+      expect_offense(<<~RUBY)
+        User.find_all_by_not_a_reserved_method(name)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `where` instead of dynamic `find_all_by_not_a_reserved_method`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.where(not_a_reserved_method: name)
+      RUBY
+
+      expect_no_offenses(<<~RUBY)
+        User.find_all_by_reserved_method_one("backend")
+      RUBY
+
+      expect_no_offenses(<<~RUBY)
+        User.find_all_by_reserved_method_two!("backend")
+      RUBY
+    end
+  end
 end
