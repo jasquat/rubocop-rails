@@ -8,7 +8,7 @@ module RuboCop
         include ActiveRecordHelper
         extend AutoCorrector
 
-        MSG = 'Use `arel` instead of `all`.'
+        MSG = 'Use `arel` instead of `%<method>s`.'
         METHOD_MAPPING = { conditions: :where, include: :includes }.freeze
 
         def_node_matcher :method_call_to_all, <<-PATTERN
@@ -19,10 +19,14 @@ module RuboCop
           (send _ :find (:sym :all) (hash ...))
         PATTERN
 
-        def on_send(node)
-          return unless method_call_to_all(node) || method_call_to_find_all(node)
+        def_node_matcher :method_call_to_first, <<-PATTERN
+          (send _ :first (hash ...))
+        PATTERN
 
-          message = format(MSG)
+        def on_send(node)
+          return unless method_call_to_all(node) || method_call_to_find_all(node) || method_call_to_first(node)
+
+          message = format(MSG, method: node.method_name)
           add_offense(node, message: message) do |corrector|
             autocorrect(corrector, node)
           end
@@ -38,7 +42,19 @@ module RuboCop
             "#{method_name}(#{contents})"
           end
 
-          corrector.replace(node.loc.expression, "#{node.children.first.source}.#{method_calls.join('.')}")
+          if node.method?(:first)
+            # See tests for the why
+            if (where_call = method_calls.grep(/^where\(/).first)
+              method_calls.delete(where_call)
+              method_calls << where_call.sub(/^where\(/, 'find_by(')
+            else
+              method_calls << 'first'
+            end
+          end
+
+          receiver_string = ''
+          receiver_string = "#{node.children.first.source}." if node.children.first
+          corrector.replace(node.loc.expression, "#{receiver_string}#{method_calls.join('.')}")
         end
 
         def find_hash_from_node(node)

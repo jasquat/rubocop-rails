@@ -137,7 +137,7 @@ module RuboCop
 
         # @param node [RuboCop::AST::Node]
         # @return [Array<Symbol>]
-        def array_values(node) # rubocop:disable Metrics/MethodLength
+        def array_values(node)
           case node.type
           when :str
             [node.str_content.to_sym]
