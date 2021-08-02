@@ -14,30 +14,10 @@ InternalAffairs/NodeDestructuring:
     - 'lib/rubocop/cop/rails/relative_date_constant.rb'
     - 'lib/rubocop/cop/rails/time_zone.rb'
 
-# Offense count: 10
-Metrics/AbcSize:
-  Max: 26
-
 # Offense count: 4
 # Configuration parameters: CountComments.
 Metrics/ClassLength:
   Max: 173
-
-# Offense count: 26
-# Configuration parameters: CountComments, ExcludedMethods.
-Metrics/MethodLength:
-  Max: 17
-
-# Offense count: 77
-# Configuration parameters: Prefixes.
-# Prefixes: when, with, without
-RSpec/ContextWording:
-  Enabled: false
-
-# Offense count: 287
-# Configuration parameters: Max.
-RSpec/ExampleLength:
-  Enabled: false
 
 # Offense count: 36
 # Configuration parameters: AggregateFailuresByDefault.

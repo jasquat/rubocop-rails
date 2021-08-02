@@ -149,4 +149,39 @@ RSpec.describe RuboCop::Cop::Rails::ConvertActiveRecordHashesToArel, :config do
       RUBY
     end
   end
+
+  context 'find_with_symbol' do
+    it 'can convert simple all method' do
+      expect_offense(<<~RUBY)
+        User.find(:all)
+        ^^^^^^^^^^^^^^^ Use `arel` instead of `find`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.all
+      RUBY
+    end
+
+    it 'can convert simple first method' do
+      expect_offense(<<~RUBY)
+        User.find(:first)
+        ^^^^^^^^^^^^^^^^^ Use `arel` instead of `find`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.first
+      RUBY
+    end
+
+    it 'can convert with multiple keys and mutiple methods' do
+      expect_offense(<<~RUBY)
+        User.find(:all).do_not_touch_this_method
+        ^^^^^^^^^^^^^^^ Use `arel` instead of `find`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.all.do_not_touch_this_method
+      RUBY
+    end
+  end
 end

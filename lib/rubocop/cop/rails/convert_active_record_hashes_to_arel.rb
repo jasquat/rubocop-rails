@@ -19,12 +19,21 @@ module RuboCop
           (send _ :find (:sym :all) (hash ...))
         PATTERN
 
+        def_node_matcher :method_call_to_find_symbol, <<-PATTERN
+          (send _ :find (:sym {:all | :first}))
+        PATTERN
+
         def_node_matcher :method_call_to_first, <<-PATTERN
           (send _ :first (hash ...))
         PATTERN
 
         def on_send(node)
-          return unless method_call_to_all(node) || method_call_to_find_all(node) || method_call_to_first(node)
+          unless method_call_to_all(node) ||
+                 method_call_to_find_all(node) ||
+                 method_call_to_first(node) ||
+                 method_call_to_find_symbol(node)
+            return
+          end
 
           message = format(MSG, method: node.method_name)
           add_offense(node, message: message) do |corrector|
@@ -36,11 +45,15 @@ module RuboCop
         private
 
         def autocorrect(corrector, node)
-          method_calls = find_hash_from_node(node).children.map do |hash_element|
-            method_name = hash_key_to_arel_method(hash_element.key.value)
-            contents = hash_element.value.source
-            "#{method_name}(#{contents})"
-          end
+          method_calls = if (hash_node = find_hash_from_node(node))
+                           hash_node.children.map do |hash_element|
+                             method_name = hash_key_to_arel_method(hash_element.key.value)
+                             contents = hash_element.value.source
+                             "#{method_name}(#{contents})"
+                           end
+                         else
+                           [node.arguments.first.value.to_s]
+                         end
 
           if node.method?(:first)
             # See tests for the why
