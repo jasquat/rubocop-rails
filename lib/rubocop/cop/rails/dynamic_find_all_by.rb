@@ -37,15 +37,17 @@ module RuboCop
 
         MSG = 'Use `%<static_name>s` instead of dynamic `%<method>s`.'
         METHOD_PATTERN = /^find_all_by_(.+?)$/.freeze
-        IGNORED_ARGUMENT_TYPES = %i[hash splat].freeze
+        IGNORED_ARGUMENT_TYPES = %i[splat].freeze
+        METHOD_MAPPING = { conditions: :where, include: :includes }.freeze
 
         # rubocop:disable Metrics/CyclomaticComplexity
+        # rubocop:disable Metrics/PerceivedComplexity
         def on_send(node)
           return if node.receiver.nil? && !inherit_active_record_base?(node) || allowed_invocation?(node)
 
           method_name = node.method_name
           static_name = static_method_name(method_name)
-          return if !static_name || method_is_reserved?(method_name)
+          return if !static_name || method_is_reserved?(method_name) || node.arguments.first.type.to_s == 'hash'
           return if node.arguments.any? { |argument| IGNORED_ARGUMENT_TYPES.include?(argument.type) }
 
           message = format(MSG, static_name: static_name, method: method_name)
@@ -54,6 +56,7 @@ module RuboCop
           end
         end
         alias on_csend on_send
+        # rubocop:enable Metrics/PerceivedComplexity
         # rubocop:enable Metrics/CyclomaticComplexity
 
         private
@@ -61,10 +64,34 @@ module RuboCop
         def autocorrect(corrector, node)
           keywords = column_keywords(node.method_name)
 
-          return if keywords.size != node.arguments.size
+          method_calls = if (hash_node = find_hash_from_node(node))
+                           hash_node.children.map do |hash_element|
+                             method_name = hash_key_to_arel_method(hash_element.key.value)
+                             contents = hash_element.value.source
+                             "#{method_name}(#{contents})"
+                           end
+                         else
+                           []
+                         end
 
-          autocorrect_method_name(corrector, node)
-          autocorrect_argument_keywords(corrector, node, keywords)
+          return if keywords.size + method_calls.size != node.arguments.size
+
+          receiver_string = ''
+          receiver_string = "#{node.children.first.source}." if node.children.first
+          arguments = autocorrect_argument_keywords(corrector, node, keywords)
+          replacement_string = "#{receiver_string}#{static_method_name(node.method_name.to_s)}(#{arguments.join(', ')})"
+
+          replacement_string += ".#{method_calls.join('.')}" if method_calls.any?
+
+          corrector.replace(node.loc.expression, replacement_string)
+        end
+
+        def find_hash_from_node(node)
+          node.arguments.detect(&:hash_type?)
+        end
+
+        def hash_key_to_arel_method(method_name)
+          METHOD_MAPPING[method_name] || method_name
         end
 
         def allowed_invocation?(node)
@@ -88,9 +115,9 @@ module RuboCop
                             static_method_name(node.method_name.to_s))
         end
 
-        def autocorrect_argument_keywords(corrector, node, keywords)
-          keywords.each.with_index do |keyword, idx|
-            corrector.insert_before(node.arguments[idx].loc.expression, keyword)
+        def autocorrect_argument_keywords(_corrector, node, keywords)
+          keywords.map.with_index do |keyword, idx|
+            "#{keyword}#{node.arguments[idx].source}"
           end
         end
 

@@ -56,11 +56,7 @@ RSpec.describe RuboCop::Cop::Rails::DynamicFindAllBy, :config do
       RUBY
 
       expect_correction(<<~RUBY)
-        User.where(
-          name: name,
-          email: email,
-          token: token
-        )
+        User.where(name: name, email: email, token: token)
       RUBY
     end
   end
@@ -112,12 +108,21 @@ RSpec.describe RuboCop::Cop::Rails::DynamicFindAllBy, :config do
     expect_no_offenses('User.find_all_by_foo_and_bar(arg, *args)')
   end
 
-  it 'accepts dynamic finder with single hash argument' do
-    expect_no_offenses('Post.find_all_by_id(limit: 1)')
-  end
+  context 'with hashes' do
+    it 'accepts dynamic finder with single hash argument' do
+      expect_no_offenses('Post.find_all_by_id(limit: 1)')
+    end
 
-  it 'accepts dynamic finder with multiple arguments including hash' do
-    expect_no_offenses('Post.find_all_by_title_and_id("foo", limit: 1)')
+    it 'corrects hashes as well' do
+      expect_offense(<<~RUBY)
+        Post.find_all_by_id("foo", limit: 1)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `where` instead of dynamic `find_all_by_id`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        Post.where(id: "foo").limit(1)
+      RUBY
+    end
   end
 
   it 'accepts method in allowed_methods' do
@@ -193,21 +198,6 @@ RSpec.describe RuboCop::Cop::Rails::DynamicFindAllBy, :config do
         RubyGems::Specification.find_all_by_name("backend").gem_dir
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `where` instead of dynamic `find_all_by_name`.
       RUBY
-    end
-  end
-
-  context 'when using safe navigation operator' do
-    context 'with dynamic find_all_by_*' do
-      it 'registers an offense and corrects' do
-        expect_offense(<<~RUBY)
-          user&.find_all_by_name(name)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `where` instead of dynamic `find_all_by_name`.
-        RUBY
-
-        expect_correction(<<~RUBY)
-          user&.where(name: name)
-        RUBY
-      end
     end
   end
 
