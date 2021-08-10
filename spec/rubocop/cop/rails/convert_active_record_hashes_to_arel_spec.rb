@@ -150,6 +150,85 @@ RSpec.describe RuboCop::Cop::Rails::ConvertActiveRecordHashesToArel, :config do
     end
   end
 
+  context 'count' do
+    it 'can convert simple count method' do
+      expect_offense(<<~RUBY)
+        User.count(:include => :component)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `count`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.includes(:component).count
+      RUBY
+    end
+
+    it 'can convert simple count method with nil receiver' do
+      expect_offense(<<~RUBY)
+        count(:include => :component)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `count`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        includes(:component).count
+      RUBY
+    end
+
+    it 'can convert with conditions only' do
+      expect_offense(<<~RUBY)
+        User.count(:conditions => ['hello = ?', 'blah'])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `count`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.where(['hello = ?', 'blah']).count
+      RUBY
+    end
+
+    it 'can convert with multiple keys with conditions' do
+      expect_offense(<<~RUBY)
+        User.count(:include => :component, :conditions => ['hello = ?', 'blah'])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `count`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.includes(:component).where(['hello = ?', 'blah']).count
+      RUBY
+    end
+
+    it 'can convert with multiple keys and mutiple methods' do
+      expect_offense(<<~RUBY)
+        User.count(:include => :component, :conditions => ['hello = ?', 'blah']).do_not_touch_this_method
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `count`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.includes(:component).where(['hello = ?', 'blah']).count.do_not_touch_this_method
+      RUBY
+    end
+
+    it 'can convert with multiple keys, mutiple methods, and symbol arg' do
+      expect_offense(<<~RUBY)
+        User.count(:id, :include => :component, :conditions => ['hello = ?', 'blah']).do_not_touch_this_method
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `count`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.includes(:component).where(['hello = ?', 'blah']).count(:id).do_not_touch_this_method
+      RUBY
+    end
+
+    it 'can convert with multiple keys, mutiple methods, and string arg' do
+      expect_offense(<<~RUBY)
+        User.count('distinct(id)', :include => :component, :conditions => ['hello = ?', 'blah']).do_not_touch_this_method
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `count`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.includes(:component).where(['hello = ?', 'blah']).count('distinct(id)').do_not_touch_this_method
+      RUBY
+    end
+  end
+
   context 'find_with_symbol' do
     it 'can convert simple all method' do
       expect_offense(<<~RUBY)

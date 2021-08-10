@@ -74,7 +74,8 @@ module RuboCop
                            []
                          end
 
-          return if keywords.size + method_calls.size != node.arguments.size
+          # add 1 back in for the hash
+          return if keywords.size + (method_calls.any? ? 1 : 0) != node.arguments.size
 
           receiver_string = ''
           receiver_string = "#{node.children.first.source}." if node.children.first
