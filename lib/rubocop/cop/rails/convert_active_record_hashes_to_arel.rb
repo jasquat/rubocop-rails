@@ -3,7 +3,6 @@
 module RuboCop
   module Cop
     module Rails
-      # This cop checks dynamic `find_by_*` methods.
       class ConvertActiveRecordHashesToArel < Base
         include ActiveRecordHelper
         extend AutoCorrector
