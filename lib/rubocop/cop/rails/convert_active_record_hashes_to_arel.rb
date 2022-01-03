@@ -3,7 +3,9 @@
 module RuboCop
   module Cop
     module Rails
+      # rubocop:disable Style/Documentation
       class ConvertActiveRecordHashesToArel < Base
+        # rubocop:enable Style/Documentation
         include ActiveRecordHelper
         extend AutoCorrector
 
@@ -12,6 +14,10 @@ module RuboCop
 
         def_node_matcher :method_call_to_all, <<-PATTERN
           (send _ :all (hash ...))
+        PATTERN
+
+        def_node_matcher :method_call_to_paginate, <<-PATTERN
+          (send _ :paginate (hash ...))
         PATTERN
 
         def_node_matcher :method_call_to_find_all, <<-PATTERN
@@ -34,13 +40,15 @@ module RuboCop
           (send _ :count ({:str | :sym} _) hash)
         PATTERN
 
+        # rubocop:disable Metrics/CyclomaticComplexity
         def on_send(node)
           unless method_call_to_all(node) ||
                  method_call_to_find_all(node) ||
                  method_call_to_first(node) ||
                  method_call_to_count(node) ||
                  method_call_to_count_with_non_hash_arg(node) ||
-                 method_call_to_find_symbol(node)
+                 method_call_to_find_symbol(node) ||
+                 method_call_to_paginate(node)
             return
           end
 
@@ -49,6 +57,7 @@ module RuboCop
             autocorrect(corrector, node)
           end
         end
+        # rubocop:enable Metrics/CyclomaticComplexity
         alias on_csend on_send
 
         private

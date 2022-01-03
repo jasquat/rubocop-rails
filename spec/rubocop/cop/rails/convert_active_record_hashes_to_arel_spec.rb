@@ -47,6 +47,52 @@ RSpec.describe RuboCop::Cop::Rails::ConvertActiveRecordHashesToArel, :config do
     end
   end
 
+  context 'paginate' do
+    it 'can convert simple paginate method' do
+      expect_offense(<<~RUBY)
+        User.paginate(:include => :component)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `paginate`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.includes(:component)
+      RUBY
+    end
+
+    it 'can convert simple paginate method with nil receiver' do
+      expect_offense(<<~RUBY)
+        paginate(:include => :component)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `paginate`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        includes(:component)
+      RUBY
+    end
+
+    it 'can convert with multiple keys' do
+      expect_offense(<<~RUBY)
+        User.paginate(:include => :component, :conditions => ['hello = ?', 'blah'])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `paginate`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.includes(:component).where(['hello = ?', 'blah'])
+      RUBY
+    end
+
+    it 'can convert with multiple keys and mutiple methods' do
+      expect_offense(<<~RUBY)
+        User.paginate(:include => :component, :conditions => ['hello = ?', 'blah']).do_not_touch_this_method
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Use `arel` instead of `paginate`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        User.includes(:component).where(['hello = ?', 'blah']).do_not_touch_this_method
+      RUBY
+    end
+  end
+
   context 'find' do
     it 'can convert simple all method' do
       expect_offense(<<~RUBY)
